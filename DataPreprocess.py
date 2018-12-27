@@ -13,7 +13,7 @@ import collections
 from operator import itemgetter
 import codecs 
 import sys
-
+import numpy as np
 RAW_DATA = "simple-examples/data/ptb.train.txt"
 VOCAB_OUTPUT = 'ptb.vocab'
 
@@ -34,10 +34,9 @@ with codecs.open(VOCAB_OUTPUT, 'w', 'utf-8') as file_output:
         file_output.write(word+'\n')
 
 
-
-RAW_DATA="simple-examples/data/ptb.train.txt"
+RAW_DATA="simple-examples/data/ptb.test.txt"
 VOCAB = "ptb.vocab"
-OUTPUT_DATA = 'ptb.train'
+OUTPUT_DATA = 'ptb.test'
 
 with codecs.open(VOCAB, "r", "utf-8") as f_vocab:
     vocab = [w.strip() for w in f_vocab.readlines()]
@@ -58,29 +57,4 @@ fin.close()
 fout.close()
 
 
-
-
-
-
-
-#TRAIN_DATA = "ptb.train"
-#TRAIN_BATH_SIZE = 20
-#TRAIN_NUM_STEP = 35
-
-def read_data(file_path):
-    with open(file_path, "r") as fin:
-        id_string = ' '.join([line.strip() for line in fin.readlines()])
-    id_list = [int(w) for w in id_string.split()]
-    return id_list
-
-def make_batches(id_list, batch_size, num_step):
-    num_batches=(len(id_list)-1)//(batch_size * num_step)
-    data = np.array(id_list[:num_batches * batch_size * num_step])
-    data = np.reshape(data, [batch_size, num_batches * num_step])
-    data_batches = np.split(data, num_batches, axis = 1)
-    
-    label = np.array(id_list[1:num_batches*batch_size*num_step+1])
-    label = np.reshape(label, [batch_size, num_batches * num_step])
-    label_batches = np.split(label, num_batches, axis = 1)
-    return list(zip(data_batches, label_batches))
 
