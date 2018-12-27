@@ -30,16 +30,16 @@ SHARE_EMB_AND_SOFTMAX = True
 
 class PTBModel(object):
     def __init__(self, is_training, batch_size, num_steps):
-        self.batch_size = batche_size
+        self.batch_size = batch_size
         self.num_steps = num_steps
 
         self.input_data = tf.placeholder(tf.int32, [batch_size, num_steps])
-        self.output_data = tf.placeholder(tf.int32, [batch_size, num_steps])
+        self.targets = tf.placeholder(tf.int32, [batch_size, num_steps])
 
         dropout_keep_prob = LSTM_KEEP_PROB if is_training else 1.0
         lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(HIDDEN_SIZE)
 
-        drop = tf.contrib.rnn.DropoutWrapper(lstm_cell, output_keep_prob = keep_prob)
+        drop = tf.contrib.rnn.DropoutWrapper(lstm_cell, output_keep_prob = LSTM_KEEP_PROB) 
 
         cell = tf.contrib.rnn.MultiRNNCell([drop]*NUM_LAYERS)
         
@@ -59,20 +59,20 @@ class PTBModel(object):
                 if time_step>0:
                     tf.get_variable_scope().reuse_variables()
                 cell_output, state = cell(inputs[:, time_step, :], state)
-                outputs.append(cell_output)
-        output = tf.reshape(tf.concat(outputs, 1), [-1, HIDDEN_SIZE])
+                output.append(cell_output)
+        output = tf.reshape(tf.concat(output, 1), [-1, HIDDEN_SIZE])
 
         if SHARE_EMB_AND_SOFTMAX:
-            weight = tf.trainspose(embedding)
+            weight = tf.transpose(embedding)
         else:
             weight = tf.get_variable("weight", [HIDDEN_SIZE, VOCAB_SIZE])
         bias = tf.get_variable("bais", [VOCAB_SIZE])
-        logits = tf.matmul(output, weight) + bais
+        logits = tf.matmul(output, weight) + bias
 
         loss = tf.nn.sparse_softmax_cross_entropy_with_logits(
                 labels = tf.reshape(self.targets, [-1]),
                 logits = logits)
-        self.cost = tf.recude_sum(loss)/batch_size
+        self.cost = tf.reduce_sum(loss)/batch_size
         self.final_state = state
 
         if not is_training:return
@@ -103,4 +103,23 @@ def run_epoch(session, model, batches, train_op, output_log, step):
         step +=1
 
     return step, np.exp(total_costs/iters)
+
+
+def read_data(file_path):
+    with open(file_path, "r") as fin:
+        id_string = ' '.join([line.strip() for line in fin.readlines()])
+    id_list = [int(w) for w in id_string.split()]
+    return id_list
+
+def make_batches(id_list, batch_size, num_step):
+    num_batches=(len(id_list)-1)//(batch_size * num_step)
+    data = np.array(id_list[:num_batches * batch_size * num_step])
+    data = np.reshape(data, [batch_size, num_batches * num_step])
+    data_batches = np.split(data, num_batches, axis = 1)
+    
+    label = np.array(id_list[1:num_batches*batch_size*num_step+1])
+    label = np.reshape(label, [batch_size, num_batches * num_step])
+    label_batches = np.split(label, num_batches, axis = 1)
+    return list(zip(data_batches, label_batches))
+
 
